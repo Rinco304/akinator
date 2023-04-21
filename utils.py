@@ -139,6 +139,8 @@ def raise_connection_error(response):
         raise Exception("Your Akinator session has timed out")
     elif response == "KO - ELEM LIST IS EMPTY" or response == "WARN - NO QUESTION":
         raise Exception("\"Akinator.step\" reached 79. No more questions")
+    elif response == "Cannot connect to host cn.akinator.com:443 ssl:default [None]":
+        raise Exception("网络连接断开，请检查网络情况")
     else:
         raise Exception("An unknown error has occured. Server response: {}".format(response))
 
