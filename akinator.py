@@ -5,7 +5,7 @@ from asyncio import sleep
 from hoshino import Service
 from hoshino.typing import CQEvent
 from hoshino.typing import MessageSegment as Seg
-from hoshino.util import DailyNumberLimiter
+from hoshino.util import FreqLimiter, DailyNumberLimiter
 
 import aiohttp
 aki = Akinator()
@@ -39,8 +39,10 @@ back = ['返回','上一个','b','B']
 
 sw = Switch()
 client_session = aiohttp.ClientSession()
-_lmt = DailyNumberLimiter(5)    # 每日次数限制
+_lmt = DailyNumberLimiter(3)    # 每日次数限制
 all_status = 0    # 总限制
+_cd = 30   #冷却时长(s)
+_flmt = FreqLimiter(_cd)
 
 @sv.on_fullmatch('网络天才')
 async def akinator_start(bot, ev: CQEvent):
@@ -48,7 +50,9 @@ async def akinator_start(bot, ev: CQEvent):
     uid = ev.user_id
     gid = ev.group_id
     if not _lmt.check(uid):
-        await bot.finish(ev, '每天最多玩三次哦~你今天的次数已用完，请明天再来_(:з」∠)_', at_sender=True)
+        await bot.finish(ev, '每天最多玩三次哦~您今天的次数已用完，请明天再来_(:з」∠)_', at_sender=True)
+    if not _flmt.check(uid):
+        await bot.finish(ev, f"您冲得太快了，有{_cd}秒冷却哦", at_sender=True)
     if all_status == 1:
         if sw.get_on_off_status(gid):
             if uid == sw.on[gid]:
@@ -129,6 +133,7 @@ async def answer_question(bot, ev: CQEvent):
         answer = await aki.win(sw.aki[gid])
         msg = f"是 {answer['name']} ({answer['description']})! 我猜对了么?"+Seg.image(answer['absolute_picture_path'])
         await bot.send(ev,msg)
+        _flmt.start_cd(uid)
         _lmt.increase(uid)
         all_status = 0
         sw.turn_off(gid)
@@ -146,6 +151,7 @@ async def akinator_end(bot,ev: CQEvent):
         if sw.on[gid] != ev.user_id:
             await bot.send(ev, '不能替别人结束游戏哦～')
             return
+    _flmt.start_cd(uid)
     _lmt.increase(uid)
     all_status = 0
     sw.turn_off(gid)
