@@ -26,6 +26,13 @@ import aiohttp
 import re
 import time
 import json
+import ssl
+
+
+# 创建一个自定义 SSL 上下文，跳过证书验证
+sslcontext = ssl.create_default_context()
+sslcontext.check_hostname = False
+sslcontext.verify_mode = ssl.CERT_NONE
 
 proxy = 'http://127.0.0.1:10809' #此处填写代理地址
 
@@ -139,8 +146,6 @@ def raise_connection_error(response):
         raise Exception("Your Akinator session has timed out")
     elif response == "KO - ELEM LIST IS EMPTY" or response == "WARN - NO QUESTION":
         raise Exception("\"Akinator.step\" reached 79. No more questions")
-    elif response == "Cannot connect to host cn.akinator.com:443 ssl:default [None]":
-        raise Exception("网络连接断开，请检查网络情况")
     else:
         raise Exception("An unknown error has occured. Server response: {}".format(response))
 
@@ -202,7 +207,7 @@ class Akinator():
 
         info_regex = re.compile("var uid_ext_session = '(.*)'\\;\\n.*var frontaddr = '(.*)'\\;")
 
-        async with self.client_session.get(url="https://en.akinator.com/game", proxy=proxy) as w:
+        async with self.client_session.get(url="https://en.akinator.com/game", proxy=proxy, ssl=sslcontext) as w:
             match = info_regex.search(await w.text())
 
         self.uid, self.frontaddr = match.groups()[0], match.groups()[1]
@@ -217,7 +222,7 @@ class Akinator():
         bad_list = ["https://srv12.akinator.com:9398/ws"]
         while True:
             u = "https://" + uri
-            async with self.client_session.get(url=u, proxy=proxy) as w:
+            async with self.client_session.get(url=u, proxy=proxy, ssl=sslcontext) as w:
                 match = server_regex.search(await w.text())
 
             parsed = json.loads(match.group().split("'arrUrlThemesToPlay', ")[-1])
@@ -248,7 +253,7 @@ class Akinator():
         self.question_filter = "cat%3D1" if self.child_mode else ""
         await self._get_session_info()
 
-        async with self.client_session.get(NEW_SESSION_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), self.uid, self.frontaddr, soft_constraint, self.question_filter), headers=HEADERS, proxy=proxy) as w:
+        async with self.client_session.get(NEW_SESSION_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), self.uid, self.frontaddr, soft_constraint, self.question_filter), headers=HEADERS, proxy=proxy, ssl=sslcontext) as w:
             r = await w.text()
             try:
                 resp = json.loads(",".join(r.split("(")[1::])[:-1])
@@ -266,7 +271,7 @@ class Akinator():
         session = aki['session']
         signature = aki['signature']
         step = aki['step']
-        async with self.client_session.get(ANSWER_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), session, signature, step, ans, self.frontaddr, self.question_filter), headers=HEADERS, proxy=proxy) as w:
+        async with self.client_session.get(ANSWER_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), session, signature, step, ans, self.frontaddr, self.question_filter), headers=HEADERS, proxy=proxy, ssl=sslcontext) as w:
             r = await w.text()
             try:
                 resp = json.loads(",".join(r.split("(")[1::])[:-1])
@@ -287,7 +292,7 @@ class Akinator():
         if step == 0:
             raise Exception("You were on the first question and couldn't go back any further")
 
-        async with self.client_session.get(BACK_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), session, signature, self.step, self.question_filter), headers=HEADERS, proxy=proxy) as w:
+        async with self.client_session.get(BACK_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), session, signature, self.step, self.question_filter), headers=HEADERS, proxy=proxy, ssl=sslcontext) as w:
             r = await w.text()
             try:
                 resp = json.loads(",".join(r.split("(")[1::])[:-1])
@@ -304,7 +309,7 @@ class Akinator():
         session = aki['session']
         signature = aki['signature']
         step = aki['step']
-        async with self.client_session.get(WIN_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), session, signature, step), headers=HEADERS, proxy=proxy) as w:
+        async with self.client_session.get(WIN_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), session, signature, step), headers=HEADERS, proxy=proxy, ssl=sslcontext) as w:
             r = await w.text()
             try:
                 resp = json.loads(",".join(r.split("(")[1::])[:-1])
