@@ -24,7 +24,6 @@ help_text="""
 ※若游戏中回答问题后无反应，是因为接下来的内容违反了QQ聊天规则导致被QQ阻止发送
   这种情况下可以尝试使用[返回]重新答题绕过此问题或者结束游戏
 ※由于api设置有查询限制，此功能不能多人(多群)一起使用(后发起游戏的群会有很高概率把先发起游戏的群的连接切断)
-  为确保他人的使用体验，请等待他人结束游戏后再开始游戏
 """.strip()
 
 sv = Service('网络天才', help_=help_text)
@@ -70,7 +69,7 @@ async def akinator_start(bot, ev: CQEvent):
         sw.turn_on(gid, uid, r)
     except Exception as e:
         all_status = 0
-        if "Cannot connect to host cn.akinator.com:443 ssl:default [None]" in str(e):
+        if "Cannot connect to host cn.akinator.com:443 ssl" in str(e):
             await bot.send(ev,f'服务器出问题了，一会再来玩吧\n网络连接断开，请检查网络情况')
         else:
             await bot.send(ev,f'服务器出问题了，一会再来玩吧\n{e}')
@@ -122,7 +121,7 @@ async def answer_question(bot, ev: CQEvent):
         sw.count_plus(gid, r)
     except Exception as e:
         all_status = 0
-        if "Cannot connect to host cn.akinator.com:443 ssl:default [None]" in str(e):
+        if "Cannot connect to host cn.akinator.com:443 ssl" in str(e):
             await bot.send(ev,f'服务器出问题了，一会再来玩吧\n网络连接断开，请检查网络情况')
         else:
             await bot.send(ev,f'服务器出问题了，一会再来玩吧\n{e}')
